@@ -12,15 +12,16 @@
 	#define NET_TX_BYTES "/sys/class/net/%s/statistics/tx_bytes"
 
 	const char *
-	netspeed_rx(const char *interface)
+	netspeed_rx(const char *unused)
 	{
 		uintmax_t oldrxbytes;
 		static uintmax_t rxbytes;
 		extern const unsigned int interval;
 		char path[PATH_MAX];
+		const char *interface;
 
 		oldrxbytes = rxbytes;
-
+		interface = getinterface();
 		if (esnprintf(path, sizeof(path), NET_RX_BYTES, interface) < 0)
 			return NULL;
 		if (pscanf(path, "%ju", &rxbytes) != 1)
@@ -33,14 +34,16 @@
 	}
 
 	const char *
-	netspeed_tx(const char *interface)
+	netspeed_tx(const char *unused)
 	{
 		uintmax_t oldtxbytes;
 		static uintmax_t txbytes;
 		extern const unsigned int interval;
 		char path[PATH_MAX];
+		const char *interface;
 
 		oldtxbytes = txbytes;
+		interface = getinterface();
 
 		if (esnprintf(path, sizeof(path), NET_TX_BYTES, interface) < 0)
 			return NULL;
@@ -60,7 +63,7 @@
 	#include <sys/socket.h>
 
 	const char *
-	netspeed_rx(const char *interface)
+	netspeed_rx(const char *unused)
 	{
 		struct ifaddrs *ifal, *ifa;
 		struct if_data *ifd;
@@ -68,14 +71,15 @@
 		static uintmax_t rxbytes;
 		extern const unsigned int interval;
 		int if_ok = 0;
+		const char *interface;
 
 		oldrxbytes = rxbytes;
-
 		if (getifaddrs(&ifal) < 0) {
 			warn("getifaddrs failed");
 			return NULL;
 		}
 		rxbytes = 0;
+		interface = getinterface();
 		for (ifa = ifal; ifa; ifa = ifa->ifa_next)
 			if (!strcmp(ifa->ifa_name, interface) &&
 			   (ifd = (struct if_data *)ifa->ifa_data))
@@ -94,7 +98,7 @@
 	}
 
 	const char *
-	netspeed_tx(const char *interface)
+	netspeed_tx(const char *unused)
 	{
 		struct ifaddrs *ifal, *ifa;
 		struct if_data *ifd;
@@ -102,6 +106,7 @@
 		static uintmax_t txbytes;
 		extern const unsigned int interval;
 		int if_ok = 0;
+		const char *interface;
 
 		oldtxbytes = txbytes;
 
@@ -110,6 +115,7 @@
 			return NULL;
 		}
 		txbytes = 0;
+		interface = getinterface();
 		for (ifa = ifal; ifa; ifa = ifa->ifa_next)
 			if (!strcmp(ifa->ifa_name, interface) &&
 			   (ifd = (struct if_data *)ifa->ifa_data))

@@ -139,3 +139,13 @@ pscanf(const char *path, const char *fmt, ...)
 
 	return (n == EOF) ? -1 : n;
 }
+
+const char *
+getinterface(void)
+{
+	const char *interface;
+	interface = getenv("NETWORK_INTERFACE");
+	if (!(interface))
+		return "lo";
+	return interface;
+}

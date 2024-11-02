@@ -21,7 +21,7 @@
 	#define NET_OPERSTATE "/sys/class/net/%s/operstate"
 
 	const char *
-	wifi_perc(const char *interface)
+	wifi_perc(const char *unused)
 	{
 		int cur;
 		size_t i;
@@ -29,7 +29,9 @@
 		char path[PATH_MAX];
 		char status[5];
 		FILE *fp;
+		const char *interface;
 
+		interface = getinterface();
 		if (esnprintf(path, sizeof(path), NET_OPERSTATE, interface) < 0)
 			return NULL;
 		if (!(fp = fopen(path, "r"))) {
@@ -66,14 +68,16 @@
 	}
 
 	const char *
-	wifi_essid(const char *interface)
+	wifi_essid(const char *unused)
 	{
 		static char id[IW_ESSID_MAX_SIZE+1];
 		int sockfd;
 		struct iwreq wreq;
+		const char *interface;
 
 		memset(&wreq, 0, sizeof(struct iwreq));
 		wreq.u.essid.length = IW_ESSID_MAX_SIZE+1;
+		interface = getinterface();
 		if (esnprintf(wreq.ifr_name, sizeof(wreq.ifr_name), "%s",
 		              interface) < 0)
 			return NULL;
@@ -106,11 +110,12 @@
 	#include <sys/types.h>
 
 	static int
-	load_ieee80211_nodereq(const char *interface, struct ieee80211_nodereq *nr)
+	load_ieee80211_nodereq(const char *unused, struct ieee80211_nodereq *nr)
 	{
 		struct ieee80211_bssid bssid;
 		int sockfd;
 		uint8_t zero_bssid[IEEE80211_ADDR_LEN];
+		const char * interface;
 
 		memset(&bssid, 0, sizeof(bssid));
 		memset(nr, 0, sizeof(struct ieee80211_nodereq));
@@ -118,6 +123,7 @@
 			warn("socket 'AF_INET':");
 			return 0;
 		}
+		interface = getinterface();
 		strlcpy(bssid.i_name, interface, sizeof(bssid.i_name));
 		if ((ioctl(sockfd, SIOCG80211BSSID, &bssid)) < 0) {
 			warn("ioctl 'SIOCG80211BSSID':");
@@ -142,11 +148,13 @@
 	}
 
 	const char *
-	wifi_perc(const char *interface)
+	wifi_perc(const char *unused)
 	{
 		struct ieee80211_nodereq nr;
 		int q;
+		const char *interface;
 
+		interface = getinterface();
 		if (load_ieee80211_nodereq(interface, &nr)) {
 			if (nr.nr_max_rssi)
 				q = IEEE80211_NODEREQ_RSSI(&nr);
@@ -160,10 +168,12 @@
 	}
 
 	const char *
-	wifi_essid(const char *interface)
+	wifi_essid(const char *unused)
 	{
 		struct ieee80211_nodereq nr;
+		const char *interface;
 
+		interface = getenv(INTERFACE_NAME);
 		if (load_ieee80211_nodereq(interface, &nr))
 			return bprintf("%s", nr.nr_nwid);
 
@@ -174,15 +184,18 @@
 	#include <net80211/ieee80211_ioctl.h>
 
 	int
-	load_ieee80211req(int sock, const char *interface, void *data, int type, size_t *len)
+	load_ieee80211req(int sock, const char *unused, void *data, int type, size_t *len)
 	{
 		char warn_buf[256];
 		struct ieee80211req ireq;
+		const char *interface;
+
 		memset(&ireq, 0, sizeof(ireq));
 		ireq.i_type = type;
 		ireq.i_data = (caddr_t) data;
 		ireq.i_len = *len;
 
+		interface = getinterface();
 		strlcpy(ireq.i_name, interface, sizeof(ireq.i_name));
 		if (ioctl(sock, SIOCG80211, &ireq) < 0) {
 			snprintf(warn_buf,  sizeof(warn_buf),
@@ -196,7 +209,7 @@
 	}
 
 	const char *
-	wifi_perc(const char *interface)
+	wifi_perc(const char *unused)
 	{
 		union {
 			struct ieee80211req_sta_req sta;
@@ -207,6 +220,7 @@
 		int sockfd;
 		size_t len;
 		const char *fmt;
+		const char *interface;
 
 		if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
 			warn("socket 'AF_INET':");
@@ -216,6 +230,7 @@
 		/* Retreive MAC address of interface */
 		len = IEEE80211_ADDR_LEN;
 		fmt = NULL;
+		interface = getinterface();
 		if (load_ieee80211req(sockfd, interface, &bssid, IEEE80211_IOC_BSSID, &len))
 		{
 			/* Retrieve info on station with above BSSID */
@@ -236,12 +251,13 @@
 	}
 
 	const char *
-	wifi_essid(const char *interface)
+	wifi_essid(const char *unused)
 	{
 		char ssid[IEEE80211_NWID_LEN + 1];
 		size_t len;
 		int sockfd;
 		const char *fmt;
+		const char *interface;
 
 		if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
 			warn("socket 'AF_INET':");
@@ -251,6 +267,7 @@
 		fmt = NULL;
 		len = sizeof(ssid);
 		memset(&ssid, 0, len);
+		interface = getinterface();
 		if (load_ieee80211req(sockfd, interface, &ssid, IEEE80211_IOC_SSID, &len)) {
 			if (len < sizeof(ssid))
 				len += 1;
